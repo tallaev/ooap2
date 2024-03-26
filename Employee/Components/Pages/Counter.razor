@@ -1,0 +1,142 @@
+﻿@page "/counter"
+@rendermode InteractiveServer
+
+@inject ISnackbar Snackbar
+@using Employee.Components.Models.LAB2
+
+<MyMudProviders />
+
+<MudTable  Items="@employees" Hover="true">
+    <HeaderContent>
+        <MudTh>Имя</MudTh>
+        <MudTh>Выплачено</MudTh>
+        <MudTh>Дата</MudTh>
+        <MudTd>Премия</MudTd>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Nr">@context.Name</MudTd>
+        <MudTd DataLabel="Sign">@context.Salary $</MudTd>
+        <MudTd DataLabel="Name">@context.Payday.ToString("dd.MM.yyyy")</MudTd>
+        <MudTd DataLabel="Sign">@context.IsExtraPaid</MudTd>
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100, int.MaxValue }"
+                       RowsPerPageString="@rowsPerPageString"
+                       InfoFormat="@infoFormat"
+                       AllItemsText="@allItemsText"
+                       HorizontalAlignment="@horizontalAlignment"
+                       HideRowsPerPage="@hideRowsPerPage"
+                       HidePageNumber="@hidePageNumber"
+                       HidePagination="@hidePagination" />
+    </PagerContent>
+</MudTable>
+
+<div style="display: flex; flex-direction: row; justify-content: start; margin-top: 40px; margin-bottom: 40px">
+    <MudSelect T="string" @ref=ReportType Label="Вид отчета" AnchorOrigin="Origin.BottomCenter">
+        <MudSelectItem Value="@("Отчет по зарплатам")" />
+        <MudSelectItem Value="@("Отчет по премиям")" />
+    </MudSelect>
+
+    <MudDateRangePicker Label="Период отчета" @bind-DateRange="_dateRange" />
+    <MudButton Style="margin-left: 20px" Color="Color.Primary" Variant="Variant.Filled" @onclick="IncrementCount">Сформировать</MudButton>
+</div>
+
+@if (report != null)
+{
+    <MudPaper>
+        <div style="display: flex; flex-direction: column">
+            <div>@((MarkupString)report)</div>
+        </div>
+    </MudPaper>
+}
+
+
+
+@code {
+    private int currentCount = 0;
+
+    const int EMPLOYEES_COUNT = 500;
+    int i = 0;
+    private HorizontalAlignment horizontalAlignment = HorizontalAlignment.Right;
+    private bool hidePageNumber;
+    private bool hidePagination;
+    private bool hideRowsPerPage;
+    private string rowsPerPageString = "Rows per page:";
+    private string infoFormat = "{first_item}-{last_item} of {all_items}";
+    private string allItemsText = "All";
+
+    private string firstNamesAsStr = "Абрам,Адам,Аким,Александр,Алексей,Альберт,Анатолий,Андрей,Антон,Аркадий,Арсений,Артем,Артур,Борис,Вадим,Валентин,Валерий,Василий,Вениамин,Виктор,Виталий,Владимир,Владислав,Всеволод,Вячеслав,Геннадий,Георгий,Герман,Глеб,Григорий,Давид,Даниил,Денис,Дмитрий,Евгений,Егор,Ефим,Иван,Игорь,Илья,Иннокентий,Иосиф,Ираклий,Кирилл,Клим,Константин,Лев,Леонид,Макар,Максим,Марк,Матвей,Михаил,Назар,Никита,Николай,Олег,Павел,Петр,Прохор,Родион,Роман,Руслан,Семен,Сергей,Станислав,Степан,Тарас,Тимофей,Тимур,Тихон,Федор,Феликс,Филипп,Ярослав";
+    string lastNamesAsStr = "Александров,Алексеев,Андреев,Антонов,Артемьев,Астахов,Баранов,Белов,Богданов,Васильев,Веселов,Волков,Воронцов,Гаврилов,Герасимов,Голубев,Григорьев,Данилов,Дмитриев,Зайцев,Иванов,Ильин,Исаев,Кириллов,Королев,Крылов,Кузнецов,Кузьмин,Куликов,Лазарев,Лебедев,Леонов,Логинов,Лукин,Любимов,Максимов,Малинин,Марков,Медведев,Миронов,Михайлов,Морозов,Муромцев,Никитин,Николаев,Орлов,Осипов,Павлов,Петров,Поляков,Попов,Романов,Рыков,Савельев,Селезнев,Сергеев,Соколов,Степанов,Тарасов,Титов,Тихонов,Третьяков,Трофимов,Туров,Федоров,Фомичев,Хабаров,Харламов,Царев,Цветков,Чернов,Шариков,Ширяев,Шувалов,Щербаков,Юрьев,Яковлев";
+
+    private DateRange _dateRange = new DateRange(DateTime.Now.Date, DateTime.Now.AddDays(5).Date);
+
+    List<string> firstNames = new();
+    List<string> lastNames = new();
+    List<Employee> employees = new();
+    MudSelect<string> ReportType;
+
+    string report = null;
+
+    protected override void OnInitialized()
+    {
+        firstNames = firstNamesAsStr.Split(",").ToList();
+        lastNames = lastNamesAsStr.Split(",").ToList();
+
+        employees = GenerateEmployees(); 
+    }
+
+    private List<Employee> GenerateEmployees()
+    {
+        List<Employee> employees = new();
+
+        Random rnd = new();
+
+        for (int i = 0; i < EMPLOYEES_COUNT; i++)
+        {
+            employees.Add(new Employee() { Name = $"{firstNames[rnd.Next(0, firstNames.Count)]} {lastNames[rnd.Next(0, lastNames.Count)]}", Salary = rnd.Next(150, 1500), Payday = new DateTime(rnd.Next(2023, 2025), rnd.Next(1, 12), rnd.Next(1, 28)), IsExtraPaid = (rnd.Next(-100, 99) >= 0) });
+        }
+
+        return employees;
+    }
+
+    private void IncrementCount()
+    {
+
+        switch (ReportType.Value)
+        {
+            case "Отчет по зарплатам":
+                report = GetReport();
+                break;
+
+            case "Отчет по премиям":
+                report = GetReportExtraPaid();
+                break;
+
+            default:
+                Snackbar.Add("Выберите вид отчета!", Severity.Error);
+                break;
+        }
+    }
+
+    private string GetReport()
+    {
+        SalaryReport report = new SalaryReport(employees, _dateRange);
+        report.BuildCompletedReport();
+
+        string reportAsStr = report.ToString();
+
+        return reportAsStr;
+    }
+
+    private string GetReportExtraPaid()
+    {
+        ExtraPayReport report = new ExtraPayReport(employees, _dateRange);
+        report.BuildCompletedReport();
+
+        string reportAsStr = report.ToString();
+
+        return reportAsStr;
+
+
+    }
+}
